@@ -34,17 +34,109 @@ function exit_handler(event) {
   }
 }
 
+// BETA DIST //
+function sum(nums) {
+  var accumulator = 0;
+  for (var i = 0, l = nums.length; i < l; i++)
+    accumulator += nums[i];
+  return accumulator;
+}
+
+
+function rbeta(alpha, beta) {
+  var alpha_gamma = rgamma(alpha, 1);
+  return alpha_gamma / (alpha_gamma + rgamma(beta, 1));
+}
+
+// From Python source, so I guess it's PSF Licensed
+var SG_MAGICCONST = 1 + Math.log(4.5);
+var LOG4 = Math.log(4.0);
+
+function rgamma(alpha, beta) {
+  // does not check that alpha > 0 && beta > 0
+  if (alpha > 1) {
+    // Uses R.C.H. Cheng, "The generation of Gamma variables with non-integral
+    // shape parameters", Applied Statistics, (1977), 26, No. 1, p71-74
+    var ainv = Math.sqrt(2.0 * alpha - 1.0);
+    var bbb = alpha - LOG4;
+    var ccc = alpha + ainv;
+
+    while (true) {
+      var u1 = Math.random();
+      if (!((1e-7 < u1) && (u1 < 0.9999999))) {
+        continue;
+      }
+      var u2 = 1.0 - Math.random();
+      v = Math.log(u1/(1.0-u1))/ainv;
+      x = alpha*Math.exp(v);
+      var z = u1*u1*u2;
+      var r = bbb+ccc*v-x;
+      if (r + SG_MAGICCONST - 4.5*z >= 0.0 || r >= Math.log(z)) {
+        return x * beta;
+      }
+    }
+  }
+  else if (alpha == 1.0) {
+    var u = Math.random();
+    while (u <= 1e-7) {
+      u = Math.random();
+    }
+    return -Math.log(u) * beta;
+  }
+  else { // 0 < alpha < 1
+    // Uses ALGORITHM GS of Statistical Computing - Kennedy & Gentle
+    while (true) {
+      var u3 = Math.random();
+      var b = (Math.E + alpha)/Math.E;
+      var p = b*u3;
+      if (p <= 1.0) {
+        x = Math.pow(p, (1.0/alpha));
+      }
+      else {
+        x = -Math.log((b-p)/alpha);
+      }
+      var u4 = Math.random();
+      if (p > 1.0) {
+        if (u4 <= Math.pow(x, (alpha - 1.0))) {
+          break;
+        }
+      }
+      else if (u4 <= Math.exp(-x)) {
+        break;
+      }
+    }
+  }
+}
+
+
+  function testbeta(a, b, N) {
+    var sample_mean = sum(_.range(N).map(function() { return rbeta(a, b); })) / N;
+    var analytic_mean = a / (a + b);
+    console.log(sample_mean, "~", analytic_mean);
+  }
+
+  function get_decay_rate(galaxy) {
+    if (galaxy == 0) {
+      var decay_rate = rbeta(13, 51);
+    } else if (galaxy == 1) {
+      var decay_rate = rbeta(50, 50);
+    } else if (galaxy == 2) {
+      var decay_rate = rbeta(50, 12);
+    }
+    return decay_rate;
+  }
+
 
 ////////// PAVLOVIA ////////////
-var pavlovia_init = {
-	type: "pavlovia",
-	command: "init"
-};
+// var pavlovia_init = {
+// 	type: "pavlovia",
+// 	command: "init"
+// };
 
-var pavlovia_finish = {
-	type: "pavlovia",
-	command: "finish"
-	};
+// var pavlovia_finish = {
+// 	type: "pavlovia",
+// 	command: "finish"
+// 	};
 ///////////////////////////////
 
 // for playiing audio
@@ -142,7 +234,7 @@ var cond = 1;
 //////////////////////////////////////////////////////////////
 
 var timeline = []; // structures the experiment
-timeline.push(pavlovia_init);
+// timeline.push(pavlovia_init);
 
 //////////////IMAGES ///////////////////////////
 function parse(str) {
@@ -153,14 +245,14 @@ function parse(str) {
     return str.replace(/%s/g, () => args[i++]);
 }
 
-var main_stim_string = "<img src='run_exp/static/images/task_images/aliens/old_aliens/icon/alien-%s.jpg'>"
+var main_stim_string = "<img src='../static/images/task_images/aliens/old_aliens/icon/alien-%s.jpg'>"
 
-var button_string ='<button class="jspsych-html-btn"><img src="run_exp/static/images/task_images/aliens/old_aliens/icon/alien-%s.jpg" height="50"></button>'
+var button_string ='<button class="jspsych-html-btn"><img src="../static/images/task_images/aliens/old_aliens/icon/alien-%s.jpg" height="50"></button>'
 
 
 
-var image_prefix = "run_exp/static/images/task_images/";
-var image_prefix_button = "<img src=run_exp/static/images/task_images/";
+var image_prefix = "../static/images/task_images/";
+var image_prefix_button = "<img src=../static/images/task_images/";
 
 // default images
 const decision_img = [image_prefix+"land.jpg"];
@@ -327,12 +419,12 @@ var dig = {
     if (last_trial_data.trial_type == "decision") {
       var adjusted_rt = 3000 - last_trial_data.rt;
       dig.frame_time = adjusted_rt/3;
-      var src = "run_exp/static/audio/axe.mp3#t=2.0,"
+      var src = "../static/audio/axe.mp3#t=2.0,"
       var tt_sec = Math.max(adjusted_rt/1000-1.5,1); //need to convert to seconds
       var axe_audio = new sound(src.concat(tt_sec.toString()))
       axe_audio.play()
     } else {
-      var src = "run_exp/static/audio/axe.mp3#t=2.0,"
+      var src = "../static/audio/axe.mp3#t=2.0,"
       var tt_sec = 1.0; //need to convert to seconds
       var axe_audio = new sound(src.concat(tt_sec.toString()))
       axe_audio.play()
@@ -353,7 +445,7 @@ var dig_instruc = {
   choices: jsPsych.NO_KEYS,
   frame_time: 667,
   on_start: function(dig_instruc) {
-    var src = "run_exp/static/audio/axe.mp3#t=2.0,"
+    var src = "../static/audio/axe.mp3#t=2.0,"
     var tt_sec = 1.0; //need to convert to seconds
     var axe_audio = new sound(src.concat(tt_sec.toString()))
     axe_audio.play()
@@ -374,12 +466,12 @@ var dig_prac = {
     if (last_trial_data.trial_type == "decision") {
       var adjusted_rt = 3000 - last_trial_data.rt;
       dig_prac.frame_time = adjusted_rt/3;
-      var src = "run_exp/static/audio/axe.mp3#t=2.0,"
+      var src = "../static/audio/axe.mp3#t=2.0,"
       var tt_sec = Math.max(adjusted_rt/1000-1.5,1); //need to convert to seconds
       var axe_audio = new sound(src.concat(tt_sec.toString()))
       axe_audio.play()
     } else {
-      var src = "run_exp/static/audio/axe.mp3#t=2.0,"
+      var src = "../static/audio/axe.mp3#t=2.0,"
       var tt_sec = 1.0; //need to convert to seconds
       var axe_audio = new sound(src.concat(tt_sec.toString()))
       axe_audio.play()
@@ -402,7 +494,7 @@ var harvest = {
 	on_start: function(harvest) {
 		var last_trial_data = jsPsych.data.get().last(2).values()[0]; // last trial was dig, before that was decision
 		var reward = last_trial_data.next_reward; // round to one decimal point
-		var folder_prefix = 'run_exp/static/images/task_images/gems/';
+		var folder_prefix = '../static/images/task_images/gems/';
 		var integer = Math.round(reward.toString());
 		var img_suffix = '.jpg'
 		var harvest_img = folder_prefix.concat(integer,img_suffix)
@@ -439,7 +531,7 @@ var harvest_prac = {
 
 var harvest_instruc = {
 	type: 'image-keyboard-response',
-	stimulus: 'run_exp/static/images/task_images/gems/100.jpg',
+	stimulus: '../static/images/task_images/gems/100.jpg',
   prompt: "<p style ='color:white;'>Dig here or travel to a new planet?</p>",
 	stimulus_height:700,
 	stimulus_duration: 1000, // in milliseconds
@@ -462,7 +554,7 @@ var harvest_instruc = {
      var last_rt = last_trial_data.rt;
      var adjusted_travel_time = 10000 - last_rt;
      travel.frame_time = adjusted_travel_time/9;
-     var src = "run_exp/static/audio/rocket.mp3#t=0,"
+     var src = "../static/audio/rocket.mp3#t=0,"
      var tt_sec = adjusted_travel_time/1000-0.5; //need to convert to seconds
      var rocket_audio = new sound(src.concat(tt_sec.toString()))
      rocket_audio.play()
@@ -484,7 +576,7 @@ var harvest_instruc = {
      var last_rt = last_trial_data.rt;
      var adjusted_travel_time = 10000 - last_rt;
      travel.frame_time = adjusted_travel_time/9;
-     var src = "run_exp/static/audio/rocket.mp3#t=0,"
+     var src = "../static/audio/rocket.mp3#t=0,"
      var tt_sec = adjusted_travel_time/100-0.5; //need to convert to seconds
      var rocket_audio = new sound(src.concat(tt_sec.toString()))
      rocket_audio.play()
@@ -556,7 +648,7 @@ var harvest_instruc = {
             jsPsych.addNodeToEndOfTimeline({timeline: [compare_alien_8],}, jsPsych.resumeExperiment);
           }}
 
-          jsPsych.addNodeToEndOfTimeline({timeline: [end_of_experiment_read,pavlovia_finish],}, jsPsych.resumeExperiment);
+          jsPsych.addNodeToEndOfTimeline({timeline: [end_of_experiment_read],}, jsPsych.resumeExperiment);
 
          // other blocks
          } else { // if this is the firs =t or second and choose to leave
@@ -649,7 +741,7 @@ var time_out = {
 
 var quiz_instruc = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_10_quiz.m4a",
+  stimulus: "../static/audio/clip_10_quiz.m4a",
   prompt: practice_game_finish_txt,
   choices: ['continue'],
   on_finish: function(data) {
@@ -658,7 +750,7 @@ var quiz_instruc = {
 
 var quiz_q_1_ask = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_11_q1_ask.m4a",
+  stimulus: "../static/audio/clip_11_q1_ask.m4a",
   prompt: "<p>How do you win extra money?</p>",
   choices: ['Visiting more planets','Staying at home base longer', 'Collecting more gems'],
   on_finish: function(data) {
@@ -672,7 +764,7 @@ var quiz_q_1_ask = {
 
 var quiz_q_1_fb_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_12_q1_correct.m4a",
+  stimulus: "../static/audio/clip_12_q1_correct.m4a",
   prompt: "<p>That’s correct. You win extra money by collecting more gems.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -684,7 +776,7 @@ var quiz_q_1_fb_correct = {
 
 var quiz_q_1_fb_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_13_q1_incorrect.m4a",
+  stimulus: "../static/audio/clip_13_q1_incorrect.m4a",
   prompt: "<p>That’s incorrect. You win extra money by collecting more gems.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -695,7 +787,7 @@ var quiz_q_1_fb_incorrect = {
 
 var quiz_q_2_ask = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_14_q2_ask.m4a",
+  stimulus: "../static/audio/clip_14_q2_ask.m4a",
   prompt: "<p>The length of this experiment</p>",
   choices: ["Depends on how many planets you've visited","is 20 minutes no matter what","depends on how many gems you've collected"],
   on_finish: function(data) {
@@ -710,7 +802,7 @@ var quiz_q_2_ask = {
 
 var quiz_q_2_fb_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_15_q2_correct.m4a",
+  stimulus: "../static/audio/clip_15_q2_correct.m4a",
   prompt: "<p>That’s correct. The experiment is 20 minutes no matter what.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -721,7 +813,7 @@ var quiz_q_2_fb_correct = {
 
 var quiz_q_2_fb_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_16_q2_incorrect.m4a",
+  stimulus: "../static/audio/clip_16_q2_incorrect.m4a",
   prompt: "<p>That’s incorrect. The experiment is 20 minutes no matter what.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -732,7 +824,7 @@ var quiz_q_2_fb_incorrect = {
 
 var quiz_q_3_ask = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_17_q3_ask.m4a",
+  stimulus: "../static/audio/clip_17_q3_ask.m4a",
   prompt: "<p>You press what letter on your keyboard to travel to a new planet?</p>",
   choices: ['A','L'],
   on_finish: function(data) {
@@ -747,7 +839,7 @@ var quiz_q_3_ask = {
 
 var quiz_q_3_fb_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_18_q3_correct.m4a",
+  stimulus: "../static/audio/clip_18_q3_correct.m4a",
   prompt: "<p> That’s correct. You press the letter L to travel to a new planet.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -758,7 +850,7 @@ var quiz_q_3_fb_correct = {
 
 var quiz_q_3_fb_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_19_q3_incorrect.m4a",
+  stimulus: "../static/audio/clip_19_q3_incorrect.m4a",
   prompt: "<p>That’s incorrect.  You press the letter L to travel to a new planet.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -770,7 +862,7 @@ var quiz_q_3_fb_incorrect = {
 
 var quiz_q_4_ask = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_20_q4_ask.m4a",
+  stimulus: "../static/audio/clip_20_q4_ask.m4a",
   prompt: "<p>The more you dig on a planet the fewer gems you’ll get with each dig.</p>",
   choices: ['True','False'],
   on_finish: function(data) {
@@ -785,7 +877,7 @@ var quiz_q_4_ask = {
 
 var quiz_q_4_fb_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_21_q4_correct.m4a",
+  stimulus: "../static/audio/clip_21_q4_correct.m4a",
   prompt: "<p> That’s correct. The more you dig on a planet the fewer gems you’ll get with each dig. </p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -796,7 +888,7 @@ var quiz_q_4_fb_correct = {
 
 var quiz_q_4_fb_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_22_q4_incorrect.m4a",
+  stimulus: "../static/audio/clip_22_q4_incorrect.m4a",
   prompt: "<p>That’s incorrect.  The more you dig on a planet the fewer gems you’ll get with each dig.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -807,7 +899,7 @@ var quiz_q_4_fb_incorrect = {
 
 var quiz_q_5_ask = {
   type:'audio-button-response',
-  stimulus: "run_exp/static/audio/clip_23_q5_ask.m4a",
+  stimulus: "../static/audio/clip_23_q5_ask.m4a",
   prompt: "<p>Does the alien tell you anything about how much treasure is on the planet?</p>",
   choices: ['Yes','No'],
   on_finish: function(data) {
@@ -832,7 +924,7 @@ var quiz_q_5_ask = {
 
 var quiz_q_5_fb_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_24_q5_correct.m4a",
+  stimulus: "../static/audio/clip_24_q5_correct.m4a",
   prompt: "<p> That’s correct. The alien tells you nothing about how much treasure is on the planet.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -843,7 +935,7 @@ var quiz_q_5_fb_correct = {
 
 var quiz_q_5_fb_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_25_q5_incorrect.m4a",
+  stimulus: "../static/audio/clip_25_q5_incorrect.m4a",
   prompt: "<p>That’s incorrect. The alien tells you nothing about how much treasure is on the planet.</p>",
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -854,7 +946,7 @@ var quiz_q_5_fb_incorrect = {
 
 var quiz_correct = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_26_correct_quiz.m4a",
+  stimulus: "../static/audio/clip_26_correct_quiz.m4a",
   prompt: quiz_correct_txt,
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -873,7 +965,7 @@ var quiz_correct_continue = {
 
 var quiz_incorrect = {
   type:'audio-keyboard-response',
-  stimulus: "run_exp/static/audio/clip_27_incorrect_quiz.m4a",
+  stimulus: "../static/audio/clip_27_incorrect_quiz.m4a",
   prompt: quiz_incorrect_txt,
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -906,7 +998,7 @@ var alien_welcome = {
     window.aliens_copy.push(alien)
     console.log('aliens_copy')
     console.log(aliens_copy)
-    alien_welcome.stimulus = "run_exp/static/images/task_images/aliens/old_aliens/planet/alien_planet-".concat(alien,'.jpg')
+    alien_welcome.stimulus = "../static/images/task_images/aliens/old_aliens/planet/alien_planet-".concat(alien,'.jpg')
   },
   on_finish: function(data) {
   	window.planet = planet + 1;
@@ -928,7 +1020,7 @@ var alien_welcome_prac = {
   choices: jsPsych.NO_KEYS,
   on_start: function(alien_welcome_prac) {
     window.alien = aliens_prac.pop().toString();
-    alien_welcome_prac.stimulus = "run_exp/static/images/task_images/aliens/practice_aliens/planet/alien_planet-".concat(alien,'.jpg')
+    alien_welcome_prac.stimulus = "../static/images/task_images/aliens/practice_aliens/planet/alien_planet-".concat(alien,'.jpg')
   },
   on_finish: function(data) {
     data.trial_type = "alien_welcome_prac";
@@ -955,7 +1047,7 @@ var sort_trial = {
  // Welcome
  var welcome = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_1_welcome.m4a',
+   stimulus:'../static/audio/clip_1_welcome.m4a',
    prompt: welcome_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -972,7 +1064,7 @@ var sort_trial = {
 
  var move_explain= {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_2_move.m4a',
+   stimulus:'../static/audio/clip_2_move.m4a',
    prompt: move_explain_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -993,7 +1085,7 @@ var sort_trial = {
 
  var instructions_goal = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_3_goal.m4a',
+   stimulus:'../static/audio/clip_3_goal.m4a',
    prompt: goal_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -1006,7 +1098,7 @@ var sort_trial = {
 
  var instructions_dig = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_4_dig.m4a',
+   stimulus:'../static/audio/clip_4_dig.m4a',
    prompt: dig_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -1029,7 +1121,7 @@ var sort_trial = {
 
  var instructions_travel = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_5_travel.m4a',
+   stimulus:'../static/audio/clip_5_travel.m4a',
    prompt: travel_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -1052,7 +1144,7 @@ var sort_trial = {
 
  var instructions_alien = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_6_alien.m4a',
+   stimulus:'../static/audio/clip_6_alien.m4a',
    prompt: alien_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -1064,7 +1156,7 @@ var sort_trial = {
 
  var instructions_time_out = {
    type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_7_timeout.m4a',
+   stimulus:'../static/audio/clip_7_timeout.m4a',
    prompt: time_out_txt,
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true,
@@ -1076,7 +1168,7 @@ var sort_trial = {
 
  var instructions_break = {
   type: 'audio-keyboard-response',
-  stimulus:'run_exp/static/audio/clip_8_break.m4a',
+  stimulus:'../static/audio/clip_8_break.m4a',
  	prompt:  break_txt,
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -1087,7 +1179,7 @@ var sort_trial = {
 
 var instructions_practice_game = {
   type: 'audio-keyboard-response',
-  stimulus:'run_exp/static/audio/clip_9_practice.m4a',
+  stimulus:'../static/audio/clip_9_practice.m4a',
  	prompt: practice_game_txt,
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true,
@@ -1098,7 +1190,7 @@ var instructions_practice_game = {
 
 var instructions_repeat = {
     type: 'audio-keyboard-response',
-    stimulus:'run_exp/static/audio/clip_29_instruct_again.m4a',
+    stimulus:'../static/audio/clip_29_instruct_again.m4a',
    	prompt: instructions_repeat_txt,
     choices: jsPsych.NO_KEYS,
     trial_ends_after_audio: true,
@@ -1136,16 +1228,16 @@ var instructions_repeat_continue = {
 
  var lock_choice = {
    type:'html-keyboard-response',
-   stimulus: 'run_exp/static/images/task_images/aliens/instructions_aliens/planet/alien_planet-1.jpg',
+   stimulus: '../static/images/task_images/aliens/instructions_aliens/planet/alien_planet-1.jpg',
    choices:['space'],
    on_start: function(instruc_dec_key) {
 
      last_trial = jsPsych.data.get().last(1).values()[0];
 
      if (last_trial.button_pressed == 0) {
-       instruc_dec_key.stimulus = last_trial.stimulus.concat('<button class="jspsych-html-btn-chosen"><img src="run_exp/static/images/task_images/planet-01.jpg" height="50"></button><button class="jspsych-html-btn-unchosen"><img src="run_exp/static/images/task_images/planet-02.jpg" height="50"></button><p><b>[press the space bar to lock in your answer]<b><br></p>');
+       instruc_dec_key.stimulus = last_trial.stimulus.concat('<button class="jspsych-html-btn-chosen"><img src="../static/images/task_images/planet-01.jpg" height="50"></button><button class="jspsych-html-btn-unchosen"><img src="../static/images/task_images/planet-02.jpg" height="50"></button><p><b>[press the space bar to lock in your answer]<b><br></p>');
      } else {
-       instruc_dec_key.stimulus = last_trial.stimulus.concat('<button class="jspsych-html-btn-unchosen"><img src="run_exp/static/images/task_images/planet-01.jpg" height="50"></button><button class="jspsych-html-btn-chosen"><img src="run_exp/static/images/task_images/planet-02.jpg" height="50"></button><p><b>[press the space bar to lock in your answer]<b><br></p>');}
+       instruc_dec_key.stimulus = last_trial.stimulus.concat('<button class="jspsych-html-btn-unchosen"><img src="../static/images/task_images/planet-01.jpg" height="50"></button><button class="jspsych-html-btn-chosen"><img src="../static/images/task_images/planet-02.jpg" height="50"></button><p><b>[press the space bar to lock in your answer]<b><br></p>');}
      },
    on_finish: function(data) {
       last_trial = jsPsych.data.get().last(1).values()[0];
@@ -1170,7 +1262,7 @@ var instructions_repeat_continue = {
 
  var instructions_begin_exp = {
  	 type: 'audio-keyboard-response',
-   stimulus:'run_exp/static/audio/clip_28_real_game.m4a',
+   stimulus:'../static/audio/clip_28_real_game.m4a',
  	 prompt:'<p>Now that you know how  to dig for space treasure and travel to new planets, you can start exploring! </p><p>Do you want to go over the instructions again or get started with the real game?</p>',
    choices: jsPsych.NO_KEYS,
    trial_ends_after_audio: true};
@@ -1195,13 +1287,13 @@ var instructions_begin_exp_continue = {
 
 var end_of_block_read = {
 	type: 'audio-button-response',
-  stimulus: 'run_exp/static/audio/clip_32_block_end.m4a',
-	prompt:"<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to continue, press <strong>continue</strong>. </p><p><img src='run_exp/static/images/task_images/home_base.jpg' height='700' width='auto'>",
+  stimulus: '../static/audio/clip_32_block_end.m4a',
+	prompt:"<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to continue, press <strong>continue</strong>. </p><p><img src='../static/images/task_images/home_base.jpg' height='700' width='auto'>",
   choices: ['continue'],
   trial_ends_after_audio: true,
   on_start: function(end_of_block_read) {
     var begin_para = "<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to move on, press the <strong>continue</strong> button below. </p>"
-    var img = "<p><img src='run_exp/static/images/task_images/home_base.jpg' height='700' width='auto'></p>";
+    var img = "<p><img src='../static/images/task_images/home_base.jpg' height='700' width='auto'></p>";
 		var block_str = (b_num-1).toString();
 		var home_base = "<p style='font-size:25px;'> Home Base Visit # ";
     var para_end = "</p>";
@@ -1221,11 +1313,11 @@ var end_of_block_read = {
 
 var end_of_block_continue = {
 	type: 'html-button-response',
-	stimulus:"<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to continue, press <strong>continue</strong>. </p><p><img src='run_exp/static/images/task_images/home_base.jpg' height='700' width='auto'>",
+	stimulus:"<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to continue, press <strong>continue</strong>. </p><p><img src='../static/images/task_images/home_base.jpg' height='700' width='auto'>",
   choices: ['continue'],
   on_start: function(end_of_block_continue) {
     var begin_para = "<p> You have been traveling for a while. Time to take a rest at home base! </p> <p> When you are ready to move on, press the <strong>continue</strong> button below. </p>"
-    var img = "<p><img src='run_exp/static/images/task_images/home_base.jpg' height='700' width='auto'></p>";
+    var img = "<p><img src='../static/images/task_images/home_base.jpg' height='700' width='auto'></p>";
     var block_str = (b_num-1).toString();
     var home_base = "<p style='font-size:25px;'> Home Base Visit # ";
     var para_end = "</p>";
@@ -1244,7 +1336,7 @@ var end_of_block_continue = {
 
 var instructions_compare_read = {
   type: 'audio-keyboard-response',
-  stimulus:'run_exp/static/audio/clip_30_compare.m4a',
+  stimulus:'../static/audio/clip_30_compare.m4a',
   prompt:'<p>Great job collecting treasure! We’re now going to ask you some questions about the aliens you met.</p><p>Some aliens took better care of their mines, and so it was easier to collect treasure from them. </p><p>You’ll be shown one main alien and be asked to pick one alien amongst 3 who was most similar to the main alien based on how well they took care of their mines.</p>',
   choices: jsPsych.NO_KEYS,
   trial_ends_after_audio: true};
@@ -1438,8 +1530,8 @@ var compare_alien_8= {
 
 var end_of_experiment_read = {
 	type: 'audio-button-response',
-  stimulus: 'run_exp/static/audio/clip_31_end.m4a',
-	prompt:'<p> Congrats! You are done with the study!</p><br><br><p><img src="run_exp/static/images/task_images/opening_img-01.jpg"</p>',
+  stimulus: '../static/audio/clip_31_end.m4a',
+	prompt:'<p> Congrats! You are done with the study!</p><br><br><p><img src="../static/images/task_images/opening_img-01.jpg"</p>',
   choices: ['go to the survey'],
   on_start: function(end_of_experiment_read) {
     var curr_bonus = Math.round(total_space_treasure*cents_per_gem);
@@ -1448,7 +1540,7 @@ var end_of_experiment_read = {
     var begin_bonus = "<p> You made $10 plus $";
     var bonus_str = bonus.toString();
     var end_bonus = " in bonus payment! You will recieve an Amazon giftcard with this amount in the next 3 days. You</p>";
-    var end_para = "<p>Press the button below to be redirected to the survey.</p><br><br><p><img src='run_exp/static/images/task_images/opening_img-01.jpg' height='600' width='auto'></p>"
+    var end_para = "<p>Press the button below to be redirected to the survey.</p><br><br><p><img src='../static/images/task_images/opening_img-01.jpg' height='600' width='auto'></p>"
     end_of_experiment_read.prompt = begin_para.concat(begin_bonus,bonus_str,end_bonus,end_para);
     window.bonus = bonus;
   },
@@ -1463,7 +1555,7 @@ var end_of_experiment_read = {
 
 var end_of_experiment_continue = {
 	type: 'html-button-response',
-	stimulus:'<p> Congrats! You are done with the experiment!</p><br><br><p><img src="run_exp/static/images/task_images/opening_img-01.jpg"</p>',
+	stimulus:'<p> Congrats! You are done with the experiment!</p><br><br><p><img src="../static/images/task_images/opening_img-01.jpg"</p>',
   choices: ['end the game'],
   on_start: function(end_of_experiment_continue) {
     var curr_bonus = Math.round(total_space_treasure*cents_per_gem);
@@ -1472,7 +1564,7 @@ var end_of_experiment_continue = {
     var begin_bonus = "<p> You made $10 plus $";
     var bonus_str = bonus.toString();
     var end_bonus = " in bonus payment! You will recieve an Amazon giftcard with this amount in the next 3 days. You just have to answer a few short questions and then you'll ve finished with the study. </p>";
-    var end_para = "<p>Press the button below to be redirected to the survey.</p><br><br><p><img src='run_exp/static/images/task_images/opening_img-01.jpg' height='600' width='auto'></p>"
+    var end_para = "<p>Press the button below to be redirected to the survey.</p><br><br><p><img src='../static/images/task_images/opening_img-01.jpg' height='600' width='auto'></p>"
     end_of_experiment_continue.stimulus = begin_para.concat(begin_bonus,bonus_str,end_bonus,end_para);
   },
   on_finish: function(data) {
@@ -1492,8 +1584,8 @@ timeline.push(lock_choice); // add variable welcome to end of timeline array
 
 //timeline.push(instructions_begin_exp_continue);
 
-all_audio = ['run_exp/static/audio/axe.mp3', 'run_exp/static/audio/clip_10_quiz.m4a', 'run_exp/static/audio/clip_11_q1_ask.m4a', 'run_exp/static/audio/clip_12_q1_correct.m4a', 'run_exp/static/audio/clip_13_q1_incorrect.m4a', 'run_exp/static/audio/clip_14_q2_ask.m4a', 'run_exp/static/audio/clip_15_q2_correct.m4a', 'run_exp/static/audio/clip_16_q2_incorrect.m4a', 'run_exp/static/audio/clip_17_q3_ask.m4a', 'run_exp/static/audio/clip_18_q3_correct.m4a', 'run_exp/static/audio/clip_19_q3_incorrect.m4a', 'run_exp/static/audio/clip_1_welcome.m4a', 'run_exp/static/audio/clip_20_q4_ask.m4a', 'run_exp/static/audio/clip_21_q4_correct.m4a', 'run_exp/static/audio/clip_22_q4_incorrect.m4a', 'run_exp/static/audio/clip_23_q5_ask.m4a', 'run_exp/static/audio/clip_24_q5_correct.m4a', 'run_exp/static/audio/clip_25_q5_incorrect.m4a', 'run_exp/static/audio/clip_26_correct_quiz.m4a', 'run_exp/static/audio/clip_27_incorrect_quiz.m4a', 'run_exp/static/audio/clip_28_real_game.m4a', 'run_exp/static/audio/clip_29_instruct_again.m4a', 'run_exp/static/audio/clip_2_move.m4a','run_exp/static/audio/clip_30_compare.m4a', 'run_exp/static/audio/clip_31_end.m4a','run_exp/static/audio/clip_32_block_end.m4a','run_exp/static/audio/clip_3_goal.m4a', 'run_exp/static/audio/clip_4_dig.m4a', 'run_exp/static/audio/clip_5_travel.m4a', 'run_exp/static/audio/clip_6_alien.m4a', 'run_exp/static/audio/clip_7_timeout.m4a', 'run_exp/static/audio/clip_8_break.m4a',
-'run_exp/static/audio/clip_9_practice.m4a', 'run_exp/static/audio/rocket.mp3']
+all_audio = ['../static/audio/axe.mp3', '../static/audio/clip_10_quiz.m4a', '../static/audio/clip_11_q1_ask.m4a', '../static/audio/clip_12_q1_correct.m4a', '../static/audio/clip_13_q1_incorrect.m4a', '../static/audio/clip_14_q2_ask.m4a', '../static/audio/clip_15_q2_correct.m4a', '../static/audio/clip_16_q2_incorrect.m4a', '../static/audio/clip_17_q3_ask.m4a', '../static/audio/clip_18_q3_correct.m4a', '../static/audio/clip_19_q3_incorrect.m4a', '../static/audio/clip_1_welcome.m4a', '../static/audio/clip_20_q4_ask.m4a', '../static/audio/clip_21_q4_correct.m4a', '../static/audio/clip_22_q4_incorrect.m4a', '../static/audio/clip_23_q5_ask.m4a', '../static/audio/clip_24_q5_correct.m4a', '../static/audio/clip_25_q5_incorrect.m4a', '../static/audio/clip_26_correct_quiz.m4a', '../static/audio/clip_27_incorrect_quiz.m4a', '../static/audio/clip_28_real_game.m4a', '../static/audio/clip_29_instruct_again.m4a', '../static/audio/clip_2_move.m4a','../static/audio/clip_30_compare.m4a', '../static/audio/clip_31_end.m4a','../static/audio/clip_32_block_end.m4a','../static/audio/clip_3_goal.m4a', '../static/audio/clip_4_dig.m4a', '../static/audio/clip_5_travel.m4a', '../static/audio/clip_6_alien.m4a', '../static/audio/clip_7_timeout.m4a', '../static/audio/clip_8_break.m4a',
+'../static/audio/clip_9_practice.m4a', '../static/audio/rocket.mp3']
 
   jsPsych.init({
     timeline: timeline,
